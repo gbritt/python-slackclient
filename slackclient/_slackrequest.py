@@ -2,13 +2,14 @@ import json
 
 import requests
 import six
+import requests
 
 
 class SlackRequest(object):
 
     @staticmethod
     def do(token, request="?", post_data=None, domain="slack.com"):
-        '''
+          '''
         Perform a POST request to the Slack Web API
 
         Args:
@@ -19,21 +20,18 @@ class SlackRequest(object):
             domain (str): if for some reason you want to send your request to something other
                 than slack.com
         '''
-        post_data = post_data or {}
+        if post_data is None:
+            post_data = {}
 
-        # Pull file out so it isn't JSON encoded like normal fields.
-        # Only do this for requests that are UPLOADING files; downloading files
-        # use the 'file' argument to point to a File ID.
-        upload_requests = ['files.upload']
-        files = None
-        if request in upload_requests:
-            files = {'file': post_data.pop('file')} if 'file' in post_data else None
+        if "files" in post_data:
+            temp = {element:post_data[element] for element in post_data if not "files" in element}
+            return requests.post(
+            'https://{0}/api/{1}'.format(domain, request),
+            data=dict(temp, token=token), files=post_data["files"]
+            )
+        else:
+            return requests.post(
+                'https://{0}/api/{1}'.format(domain, request),
+                data=dict(post_data, token=token),
+            )
 
-        for k, v in six.iteritems(post_data):
-            if not isinstance(v, six.string_types):
-                post_data[k] = json.dumps(v)
-
-        url = 'https://{0}/api/{1}'.format(domain, request)
-        post_data['token'] = token
-
-        return requests.post(url, data=post_data, files=files)
